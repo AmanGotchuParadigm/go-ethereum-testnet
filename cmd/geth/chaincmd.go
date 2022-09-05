@@ -43,6 +43,17 @@ import (
 )
 
 var (
+	mutateCommand = &cli.Command{
+		Action:    mutateGenesis,
+		Name:      "mutate",
+		Usage:     "Change the genesis chain ID of a given data directory.",
+		ArgsUsage: "<chainID>",
+		Flags:     utils.DatabasePathFlags,
+		Description: `
+			The mutate command changes the chain ID of a given genesis block within a data directory. 
+			This is a test to see if we can use data from a different chainID for a manually set one.
+		`,
+	}
 	initCommand = &cli.Command{
 		Action:    initGenesis,
 		Name:      "init",
@@ -163,6 +174,49 @@ This command dumps out the state for a given block (or latest, if none provided)
 `,
 	}
 )
+
+func mutateGenesis(ctx *cli.Context) error {
+	if ctx.Args().Len() != 1 {
+		utils.Fatalf("need chainID as the only argument")
+	}
+	manualChainID := ctx.Args().First()
+	fmt.Printf("Setting genesis chain ID to %s.\n", manualChainID)
+
+	// Loads geth configuration and creates a blank node instance.
+	stack, _ := makeConfigNode(ctx)
+	defer stack.Close()
+	fmt.Println(stack)
+
+	// Open chain database
+	chaindb, err := stack.OpenDatabaseWithFreezer("chaindata", 0, 0, ctx.String(utils.AncientFlag.Name), "", false)
+	if err != nil {
+		utils.Fatalf("Failed to open database: %v", err)
+	}
+
+	// Get current genesis config
+	genesisHash := rawdb.ReadCanonicalHash(chaindb, 0)
+	storedConfig := rawdb.ReadChainConfig(chaindb, genesisHash)
+	fmt.Println(storedConfig)
+
+	// Change genesis config
+	n := new(big.Int)
+	n, ok := n.SetString(manualChainID, 10)
+	if !ok {
+		fmt.Println("SetString: error")
+		return nil;
+	}
+	storedConfig.ChainID = n
+
+	// Write genesis config
+	rawdb.WriteChainConfig(chaindb, genesisHash, storedConfig)
+	fmt.Println("Successfully overwrote chain ID!")
+
+	// Read updated genesis config
+	newConfig := rawdb.ReadChainConfig(chaindb, genesisHash)
+	fmt.Println(newConfig)
+
+	return nil
+}
 
 // initGenesis will initialise the given JSON format genesis file and writes it as
 // the zero'd block (i.e. genesis) or will fail hard if it can't succeed.
