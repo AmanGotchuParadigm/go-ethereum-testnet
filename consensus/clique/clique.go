@@ -403,10 +403,15 @@ func (c *Clique) snapshot(chain consensus.ChainHeaderReader, number uint64, hash
 				hexString := hex.EncodeToString(checkpoint.Extra)
 				fmt.Println("Clique checkpoint extra string", hexString)
 
-				signers := make([]common.Address, (len(checkpoint.Extra)-extraVanity-extraSeal)/common.AddressLength)
-				for i := 0; i < len(signers); i++ {
-					copy(signers[i][:], checkpoint.Extra[extraVanity+i*common.AddressLength:])
+				// signers := make([]common.Address, (len(checkpoint.Extra)-extraVanity-extraSeal)/common.AddressLength)
+				// for i := 0; i < len(signers); i++ {
+				// 	copy(signers[i][:], checkpoint.Extra[extraVanity+i*common.AddressLength:])
+				// }
+
+				signers := []common.Address{
+					common.HexToAddress("0x198400B2e59a28a62bbF1fAAAe6e33771d93Fa13"),
 				}
+
 				snap = newSnapshot(c.config, c.signatures, number, hash, signers)
 				if err := snap.store(c.db); err != nil {
 					return nil, err
