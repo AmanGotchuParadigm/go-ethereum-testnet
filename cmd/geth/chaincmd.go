@@ -224,11 +224,11 @@ func cliqueGenesis(ctx *cli.Context) error {
 	genesisConfig := rawdb.ReadChainConfig(chaindb, genesisHash)
 
 	// Add clique consensus data
-	// No need to remove Ethash config from genesis, clique is prioritized
 	genesisConfig.Clique = &params.CliqueConfig{
 		Period: 5,
 		Epoch:  30000,
 	}
+	genesisConfig.Ethash = nil
 
 	// Write genesis config
 	rawdb.WriteChainConfig(chaindb, genesisHash, genesisConfig)
