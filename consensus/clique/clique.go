@@ -19,6 +19,7 @@ package clique
 
 import (
 	"bytes"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
@@ -397,6 +398,8 @@ func (c *Clique) snapshot(chain consensus.ChainHeaderReader, number uint64, hash
 
 				fmt.Println("Clique snapshot hash", hash)
 				fmt.Println("Clique checkpoint extra", checkpoint.Extra)
+				hexString := hex.EncodeToString(checkpoint.Extra)
+				fmt.Println("Clique checkpoint extra string", hexString)
 
 				signers := make([]common.Address, (len(checkpoint.Extra)-extraVanity-extraSeal)/common.AddressLength)
 				for i := 0; i < len(signers); i++ {
