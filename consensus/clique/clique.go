@@ -393,6 +393,8 @@ func (c *Clique) snapshot(chain consensus.ChainHeaderReader, number uint64, hash
 		// consider the checkpoint trusted and snapshot it.
 		if number == 0 || (number%c.config.Epoch == 0 && (len(headers) > params.FullImmutabilityThreshold || chain.GetHeaderByNumber(number-1) == nil)) {
 			checkpoint := chain.GetHeaderByNumber(number)
+			fmt.Println("Clique snapshot number", number)
+			fmt.Println("Clique snapshot checkpoint", checkpoint)
 			if checkpoint != nil {
 				hash := checkpoint.Hash()
 
