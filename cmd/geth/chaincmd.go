@@ -49,6 +49,7 @@ var (
 		Action:    mainnetGenesis,
 		Name:      "mainnetgenesis",
 		Usage:     "Hard set genesis chain config to mainnet state.",
+		Flags:     utils.DatabasePathFlags,
 		Description: `
 			the mainnetgenesis command hard sets the genesis configuration to a mainnet genesis state.
 		`,
