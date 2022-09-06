@@ -232,7 +232,6 @@ func cliqueGenesis(ctx *cli.Context) error {
 
 	// Write genesis config
 	rawdb.WriteChainConfig(chaindb, genesisHash, genesisConfig)
-	fmt.Println("Successfully overwrote chain config")
 
 	// Read updated genesis config
 	newConfig := rawdb.ReadChainConfig(chaindb, genesisHash)
@@ -259,6 +258,7 @@ func cliqueGenesis(ctx *cli.Context) error {
 	// Writing updated header at hash
 	rawdb.WriteHeaderAtHash(chaindb, genesisHeader, genesisHash)
 
+	fmt.Println("Successfully overwrote chain config & header for clique consensus!")
 	return nil
 }
 
