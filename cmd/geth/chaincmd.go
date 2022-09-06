@@ -229,7 +229,6 @@ func cliqueGenesis(ctx *cli.Context) error {
 		Epoch:  30000,
 	}
 	genesisConfig.Ethash = nil
-	genesisConfig.Ex
 
 	// Write genesis config
 	rawdb.WriteChainConfig(chaindb, genesisHash, genesisConfig)
