@@ -17,15 +17,16 @@
 package main
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math/big"
 	"os"
 	"runtime"
 	"strconv"
 	"sync/atomic"
 	"time"
-	"math/big"
 
 	"github.com/ethereum/go-ethereum/cmd/utils"
 	"github.com/ethereum/go-ethereum/common"
@@ -40,16 +41,25 @@ import (
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/metrics"
 	"github.com/ethereum/go-ethereum/node"
-	"github.com/urfave/cli/v2"
 	"github.com/ethereum/go-ethereum/params"
+	"github.com/urfave/cli/v2"
 )
 
 var (
+	cliqueGenesisCommand = &cli.Command{
+		Action: cliqueGenesis,
+		Name:   "cliquegenesis",
+		Usage:  "Change genesis state to clique consensus",
+		Flags:  utils.DatabasePathFlags,
+		Description: `
+			the cliquegenesis command sets the genesis state to use clique consensus.
+		`,
+	}
 	mainnetGenesisCommand = &cli.Command{
-		Action:    mainnetGenesis,
-		Name:      "mainnetgenesis",
-		Usage:     "Hard set genesis chain config to mainnet state.",
-		Flags:     utils.DatabasePathFlags,
+		Action: mainnetGenesis,
+		Name:   "mainnetgenesis",
+		Usage:  "Hard set genesis chain config to mainnet state.",
+		Flags:  utils.DatabasePathFlags,
 		Description: `
 			the mainnetgenesis command hard sets the genesis configuration to a mainnet genesis state.
 		`,
@@ -196,6 +206,62 @@ This command dumps out the state for a given block (or latest, if none provided)
 	}
 )
 
+func cliqueGenesis(ctx *cli.Context) error {
+	// Loads geth configuration and creates a blank node instance.
+	stack, _ := makeConfigNode(ctx)
+	defer stack.Close()
+
+	// Open chain database
+	chaindb, err := stack.OpenDatabaseWithFreezer("chaindata", 0, 0, ctx.String(utils.AncientFlag.Name), "", false)
+	if err != nil {
+		utils.Fatalf("Failed to open database: %v", err)
+	}
+
+	/// Modify genesis chain config for clique
+
+	// Get current genesis config
+	genesisHash := rawdb.ReadCanonicalHash(chaindb, 0)
+	genesisConfig := rawdb.ReadChainConfig(chaindb, genesisHash)
+
+	// Add clique consensus data
+	// No need to remove Ethash config from genesis, clique is prioritized
+	genesisConfig.Clique = &params.CliqueConfig{
+		Period: 5,
+		Epoch:  30000,
+	}
+
+	// Write genesis config
+	rawdb.WriteChainConfig(chaindb, genesisHash, genesisConfig)
+	fmt.Println("Successfully overwrote chain config")
+
+	// Read updated genesis config
+	newConfig := rawdb.ReadChainConfig(chaindb, genesisHash)
+	fmt.Println(newConfig)
+
+	/// Modify genesis chain header for clique
+
+	// Read existing header
+	genesisHeaderNumber := rawdb.ReadHeaderNumber(chaindb, genesisHash)
+	genesisHeader := rawdb.ReadHeader(chaindb, genesisHash, *genesisHeaderNumber)
+
+	// Add clique consensus data to genesisHeader
+	genesisHeader.Difficulty = big.NewInt(1)
+	genesisHeader.GasLimit = 8000000
+
+	extraHexData := `0000000000000000000000000000000000000000000000000000000000000000198400B2e59a28a62bbF1fAAAe6e33771d93Fa130000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000`
+	data, err := hex.DecodeString(extraHexData)
+	if err != nil {
+		fmt.Println("Error decoding hex string", err)
+		return err
+	}
+	genesisHeader.Extra = data
+
+	// Writing updated header at hash
+	rawdb.WriteHeaderAtHash(chaindb, genesisHeader, genesisHash)
+
+	return nil
+}
+
 func mainnetGenesis(ctx *cli.Context) error {
 	// Loads geth configuration and creates a blank node instance.
 	stack, _ := makeConfigNode(ctx)
@@ -233,7 +299,7 @@ func tesnetGenesis(ctx *cli.Context) error {
 	chainIDInt, ok := chainIDInt.SetString(manualChainID, 10)
 	if !ok {
 		fmt.Println("SetString: error")
-		return nil;
+		return nil
 	}
 
 	ParadigmChainConfig := &params.ChainConfig{
@@ -311,7 +377,7 @@ func mutateGenesis(ctx *cli.Context) error {
 	n, ok := n.SetString(manualChainID, 10)
 	if !ok {
 		fmt.Println("SetString: error")
-		return nil;
+		return nil
 	}
 	storedConfig.ChainID = n
 

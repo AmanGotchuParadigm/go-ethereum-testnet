@@ -344,7 +344,7 @@ func SetupGenesisBlockWithOverride(db ethdb.Database, genesis *Genesis, override
 	}
 
 	// Hack: If private network is used and mainnet hash in database we do not
-	// want to apply the `configOrDefault`
+	// want to apply the `configOrDefault`.
 	if genesis == nil {
 		newcfg = storedcfg
 		applyOverrides(newcfg)
