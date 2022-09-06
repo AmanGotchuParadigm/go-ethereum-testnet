@@ -212,6 +212,8 @@ func init() {
 	app.Copyright = "Copyright 2013-2022 The go-ethereum Authors"
 	app.Commands = []*cli.Command{
 		// See chaincmd.go:
+		mainnetGenesisCommand,
+		testnetGenesisCommand,
 		mutateCommand,
 		initCommand,
 		importCommand,

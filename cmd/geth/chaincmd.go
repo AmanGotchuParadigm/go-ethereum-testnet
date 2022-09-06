@@ -41,9 +41,28 @@ import (
 	"github.com/ethereum/go-ethereum/metrics"
 	"github.com/ethereum/go-ethereum/node"
 	"github.com/urfave/cli/v2"
+	"github.com/ethereum/go-ethereum/params"
 )
 
 var (
+	mainnetGenesisCommand = &cli.Command{
+		Action:    mainnetGenesis,
+		Name:      "mainnetgenesis",
+		Usage:     "Hard set genesis chain config to mainnet state.",
+		Description: `
+			the mainnetgenesis command hard sets the genesis configuration to a mainnet genesis state.
+		`,
+	}
+	testnetGenesisCommand = &cli.Command{
+		Action:    tesnetGenesis,
+		Name:      "testnetgenesis",
+		Usage:     "Hard set genesis chain config.",
+		ArgsUsage: "<chainID>",
+		Flags:     utils.DatabasePathFlags,
+		Description: `
+			the testnetgenesis command hard sets the genesis configuration to a testnet genesis state. 
+		`,
+	}
 	mutateCommand = &cli.Command{
 		Action:    mutateGenesis,
 		Name:      "mutate",
@@ -175,6 +194,93 @@ This command dumps out the state for a given block (or latest, if none provided)
 `,
 	}
 )
+
+func mainnetGenesis(ctx *cli.Context) error {
+	// Loads geth configuration and creates a blank node instance.
+	stack, _ := makeConfigNode(ctx)
+	defer stack.Close()
+	fmt.Println(stack)
+
+	// Open chain database
+	chaindb, err := stack.OpenDatabaseWithFreezer("chaindata", 0, 0, ctx.String(utils.AncientFlag.Name), "", false)
+	if err != nil {
+		utils.Fatalf("Failed to open database: %v", err)
+	}
+
+	// Get current genesis config
+	genesisHash := rawdb.ReadCanonicalHash(chaindb, 0)
+
+	// Write genesis config
+	rawdb.WriteChainConfig(chaindb, genesisHash, params.MainnetChainConfig)
+	fmt.Println("Successfully overwrote chain config")
+
+	// Read updated genesis config
+	newConfig := rawdb.ReadChainConfig(chaindb, genesisHash)
+	fmt.Println(newConfig)
+
+	return nil
+}
+
+func tesnetGenesis(ctx *cli.Context) error {
+	if ctx.Args().Len() != 1 {
+		utils.Fatalf("need chainID as the only argument")
+	}
+	manualChainID := ctx.Args().First()
+	fmt.Printf("Setting genesis chain ID to %s.\n", manualChainID)
+
+	chainIDInt := new(big.Int)
+	chainIDInt, ok := chainIDInt.SetString(manualChainID, 10)
+	if !ok {
+		fmt.Println("SetString: error")
+		return nil;
+	}
+
+	ParadigmChainConfig := &params.ChainConfig{
+		ChainID:             chainIDInt,
+		HomesteadBlock:      big.NewInt(1),
+		DAOForkBlock:        nil,
+		DAOForkSupport:      true,
+		EIP150Block:         big.NewInt(0),
+		EIP155Block:         big.NewInt(0),
+		EIP158Block:         big.NewInt(0),
+		ByzantiumBlock:      big.NewInt(0),
+		ConstantinopleBlock: big.NewInt(0),
+		PetersburgBlock:     big.NewInt(0),
+		IstanbulBlock:       big.NewInt(0),
+		MuirGlacierBlock:    nil,
+		BerlinBlock:         big.NewInt(0),
+		LondonBlock:         big.NewInt(0),
+		ArrowGlacierBlock:   nil,
+		Clique: &params.CliqueConfig{
+			Period: 15,
+			Epoch:  30000,
+		},
+	}
+
+	// Loads geth configuration and creates a blank node instance.
+	stack, _ := makeConfigNode(ctx)
+	defer stack.Close()
+	fmt.Println(stack)
+
+	// Open chain database
+	chaindb, err := stack.OpenDatabaseWithFreezer("chaindata", 0, 0, ctx.String(utils.AncientFlag.Name), "", false)
+	if err != nil {
+		utils.Fatalf("Failed to open database: %v", err)
+	}
+
+	// Get current genesis config
+	genesisHash := rawdb.ReadCanonicalHash(chaindb, 0)
+
+	// Write genesis config
+	rawdb.WriteChainConfig(chaindb, genesisHash, ParadigmChainConfig)
+	fmt.Println("Successfully overwrote chain config")
+
+	// Read updated genesis config
+	newConfig := rawdb.ReadChainConfig(chaindb, genesisHash)
+	fmt.Println(newConfig)
+
+	return nil
+}
 
 func mutateGenesis(ctx *cli.Context) error {
 	if ctx.Args().Len() != 1 {
