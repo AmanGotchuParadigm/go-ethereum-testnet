@@ -254,6 +254,14 @@ func SetupGenesisBlock(db ethdb.Database, genesis *Genesis) (*params.ChainConfig
 }
 
 func SetupGenesisBlockWithOverride(db ethdb.Database, genesis *Genesis, overrides *ChainOverrides) (*params.ChainConfig, common.Hash, error) {
+	// Hack: Bypassing genesis block setup
+	genesisHash := rawdb.ReadCanonicalHash(db, 0)
+	storedConfig := rawdb.ReadChainConfig(db, genesisHash)
+	if storedConfig != nil {
+		fmt.Println("Bypassing all genesis block setup and defaulting to existing config")
+		return storedConfig, genesisHash, nil
+	}
+
 	fmt.Println("Setting up genesis blcok with overrides", genesis, overrides)
 	if genesis != nil && genesis.Config == nil {
 		return params.AllEthashProtocolChanges, common.Hash{}, errGenesisNoConfig
@@ -289,6 +297,7 @@ func SetupGenesisBlockWithOverride(db ethdb.Database, genesis *Genesis, override
 	// We have the genesis block in database(perhaps in ancient database)
 	// but the corresponding state is missing.
 	header := rawdb.ReadHeader(db, stored, 0)
+	fmt.Println("Genesis header", header)
 	if _, err := state.New(header.Root, state.NewDatabaseWithConfig(db, nil), nil); err != nil {
 		fmt.Println("Genesis block state is missing!")
 		if genesis == nil {
