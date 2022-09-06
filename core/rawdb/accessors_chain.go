@@ -395,6 +395,7 @@ func WriteHeaderAtHash(db ethdb.KeyValueWriter, header *types.Header, hash commo
 		log.Crit("Failed to RLP encode header", "err", err)
 	}
 	key := headerKey(header.Number.Uint64(), hash)
+	fmt.Println("Storing header at key:", key)
 	if err := db.Put(key, data); err != nil {
 		log.Crit("Failed to store header", "err", err)
 	}

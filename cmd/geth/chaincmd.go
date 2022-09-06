@@ -256,7 +256,7 @@ func cliqueGenesis(ctx *cli.Context) error {
 	genesisHeader.Extra = data
 
 	// Writing updated header at hash
-	rawdb.WriteHeaderAtHash(chaindb, genesisHeader, genesisHash)
+	rawdb.WriteHeader(chaindb, genesisHeader)
 
 	fmt.Println("Successfully overwrote chain config & header for clique consensus!")
 	return nil
