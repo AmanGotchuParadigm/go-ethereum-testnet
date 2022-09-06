@@ -239,10 +239,10 @@ type ChainOverrides struct {
 // SetupGenesisBlock writes or updates the genesis block in db.
 // The block that will be used is:
 //
-//                          genesis == nil       genesis != nil
-//                       +------------------------------------------
-//     db has no genesis |  main-net default  |  genesis
-//     db has genesis    |  from DB           |  genesis (if compatible)
+//	                     genesis == nil       genesis != nil
+//	                  +------------------------------------------
+//	db has no genesis |  main-net default  |  genesis
+//	db has genesis    |  from DB           |  genesis (if compatible)
 //
 // The stored chain configuration will be updated if it is compatible (i.e. does not
 // specify a fork block below the local head block). In case of a conflict, the
@@ -254,15 +254,7 @@ func SetupGenesisBlock(db ethdb.Database, genesis *Genesis) (*params.ChainConfig
 }
 
 func SetupGenesisBlockWithOverride(db ethdb.Database, genesis *Genesis, overrides *ChainOverrides) (*params.ChainConfig, common.Hash, error) {
-	// Hack: Bypassing genesis block setup
-	genesisHash := rawdb.ReadCanonicalHash(db, 0)
-	storedConfig := rawdb.ReadChainConfig(db, genesisHash)
-	if storedConfig != nil {
-		fmt.Println("Bypassing all genesis block setup and defaulting to existing config")
-		return storedConfig, genesisHash, nil
-	}
-
-	fmt.Println("Setting up genesis blcok with overrides", genesis, overrides)
+	fmt.Println("Setting up genesis block with overrides", genesis, overrides)
 	if genesis != nil && genesis.Config == nil {
 		return params.AllEthashProtocolChanges, common.Hash{}, errGenesisNoConfig
 	}
@@ -350,6 +342,14 @@ func SetupGenesisBlockWithOverride(db ethdb.Database, genesis *Genesis, override
 		newcfg = storedcfg
 		applyOverrides(newcfg)
 	}
+
+	// Hack: If private network is used and mainnet hash in database we do not
+	// want to apply the `configOrDefault`
+	if genesis == nil {
+		newcfg = storedcfg
+		applyOverrides(newcfg)
+	}
+
 	// Check config compatibility and write the config. Compatibility errors
 	// are returned to the caller unless we're already at block zero.
 	height := rawdb.ReadHeaderNumber(db, rawdb.ReadHeadHeaderHash(db))
