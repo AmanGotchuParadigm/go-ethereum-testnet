@@ -254,6 +254,7 @@ func SetupGenesisBlock(db ethdb.Database, genesis *Genesis) (*params.ChainConfig
 }
 
 func SetupGenesisBlockWithOverride(db ethdb.Database, genesis *Genesis, overrides *ChainOverrides) (*params.ChainConfig, common.Hash, error) {
+	fmt.Println("Setting up genesis blcok with overrides", genesis, overrides)
 	if genesis != nil && genesis.Config == nil {
 		return params.AllEthashProtocolChanges, common.Hash{}, errGenesisNoConfig
 	}
@@ -289,6 +290,7 @@ func SetupGenesisBlockWithOverride(db ethdb.Database, genesis *Genesis, override
 	// but the corresponding state is missing.
 	header := rawdb.ReadHeader(db, stored, 0)
 	if _, err := state.New(header.Root, state.NewDatabaseWithConfig(db, nil), nil); err != nil {
+		fmt.Println("Genesis block state is missing!")
 		if genesis == nil {
 			genesis = DefaultGenesisBlock()
 		}
@@ -307,14 +309,21 @@ func SetupGenesisBlockWithOverride(db ethdb.Database, genesis *Genesis, override
 	// Check whether the genesis block is already written.
 	if genesis != nil {
 		hash := genesis.ToBlock().Hash()
+
+		fmt.Println("Verifying genesis state block has to stored hash!")
+		fmt.Println("Genesis state hash", hash)
+		fmt.Println("Stored hash", stored)
 		if hash != stored {
+			fmt.Println("Hash mismatch error!")
 			return genesis.Config, hash, &GenesisMismatchError{stored, hash}
 		}
 	}
 	// Get the existing chain configuration.
 	newcfg := genesis.configOrDefault(stored)
 	applyOverrides(newcfg)
+	fmt.Println("New config after calling `configOrDefault`", newcfg)
 	if err := newcfg.CheckConfigForkOrder(); err != nil {
+		fmt.Println("New config hash fork order issue!", err)
 		return newcfg, common.Hash{}, err
 	}
 	storedcfg := rawdb.ReadChainConfig(db, stored)
@@ -340,8 +349,11 @@ func SetupGenesisBlockWithOverride(db ethdb.Database, genesis *Genesis, override
 	}
 	compatErr := storedcfg.CheckCompatible(newcfg, *height)
 	if compatErr != nil && *height != 0 && compatErr.RewindTo != 0 {
+		fmt.Println("Compatibility error between stored and new config", compatErr)
+		fmt.Println("Returning new config here", newcfg)
 		return newcfg, stored, compatErr
 	}
+	fmt.Println("Writing new config to db", newcfg)
 	rawdb.WriteChainConfig(db, stored, newcfg)
 	return newcfg, stored, nil
 }
